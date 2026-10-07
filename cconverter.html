@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CConverter</title>
+  <link rel="icon" type="image/x-icon" href="cclogo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #eef1f6;
+      --card: #ffffff;
+      --text: #14213d;
+      --muted: #6b7690;
+      --line: #e1e6ef;
+      --field: #f5f7fb;
+      --accent: #3b5bdb;
+      --accent-hover: #2f4ac0;
+      --up: #139a5b;
+      --down: #d6403f;
+      --shadow: 0 10px 30px rgba(20,33,61,.08);
+    }
+    body.dark {
+      --bg: #0b0d12;
+      --card: #12151c;
+      --text: #eceff5;
+      --muted: #7d8699;
+      --line: #1f2430;
+      --field: #181c25;
+      --accent: #7c9cff;
+      --accent-hover: #6a8bf5;
+      --up: #4ade9b;
+      --down: #ff7676;
+      --shadow: none;
+    }
+
+    body.dark .range-pill { box-shadow: none; background: var(--line); }
+    body.dark .news-card a { background: transparent; }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; margin: 0; }
+    body {
+      font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      transition: background .4s ease, color .4s ease;
+    }
+
+    header.top {
+      max-width: 1080px; width: 100%; margin: 0 auto;
+      padding: 28px 24px 0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header.top h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+    header.top p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+    #mode-toggle {
+      width: 42px; height: 42px; padding: 0; margin: 0;
+      border-radius: 50%; line-height: 1;
+      background: var(--card);
+      border: 1px solid var(--line); box-shadow: var(--shadow);
+    }
+    #mode-toggle { display: flex; align-items: center; justify-content: center; color: var(--muted); }
+    #mode-toggle:hover { transform: scale(1.06); background: var(--card); color: var(--text); }
+    #mode-toggle.on { color: var(--accent); border-color: var(--accent); }
+
+    .main-container {
+      flex: 1 0 auto;
+      max-width: 1080px; width: 100%; margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 26px;
+      transition: background .4s ease, border-color .4s ease;
+    }
+
+    /* single orchestrated page-load moment */
+    .card { animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
+    .chart-card { animation-delay: .12s; }
+    .news-card { animation-delay: .22s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+    h2 { margin: 0 0 18px; font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+
+    label.field { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 14px 0 6px; }
+
+    button, select, input[type="number"] {
+      font-family: inherit; width: 100%; font-size: 15px;
+      padding: 12px 14px; margin: 0;
+      border-radius: 12px; border: 1.5px solid var(--line);
+      background: var(--field); color: var(--text);
+      transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease, background .2s ease;
+    }
+    select, input[type="number"] { outline: none; }
+    select:focus, input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    button { cursor: pointer; font-weight: 700; }
+    button:focus-visible, .range-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+    .primary {
+      background: var(--accent); color: #fff; border: none; margin-top: 18px;
+    }
+    .primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .primary:active { transform: translateY(1px) scale(.99); }
+
+    .swap-row { display: flex; justify-content: center; margin: 10px 0 -4px; }
+    #reverse-btn {
+      width: auto; padding: 7px 16px; font-size: 13px; border-radius: 999px;
+      background: transparent; color: var(--accent); border: 1.5px solid var(--line);
+    }
+    #reverse-btn:hover { border-color: var(--accent); }
+    #reverse-btn .arrows { display: inline-block; transition: transform .35s ease; }
+    #reverse-btn.spin .arrows { transform: rotate(180deg); }
+
+    .result-box {
+      margin-top: 20px; padding: 16px; border-radius: 14px;
+      background: var(--field); text-align: center; min-height: 86px;
+      display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    }
+    #result { margin: 0; font-size: 22px; font-weight: 800; color: var(--accent); letter-spacing: -.01em; }
+    #result.pop { animation: pop .45s ease; }
+    @keyframes pop { 0% { transform: scale(.94); opacity: .4; } 60% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }
+    .hint { color: var(--muted); font-size: 13px; }
+
+    .copy-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+    #copy-btn { display: none; width: auto; flex: 0 0 auto; padding: 9px 16px; font-size: 13px; background: var(--accent); color: #fff; border: none; }
+    #copy-btn:hover { background: var(--accent-hover); }
+    .raw-toggle { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .raw-toggle input { width: auto; margin: 0; accent-color: var(--accent); }
+
+    .last-updated { font-size: 12px; color: var(--muted); margin-top: 12px; text-align: center; min-height: 1em; }
+
+    /* chart card */
+    .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .rate-readout .pair { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .rate-readout .big { font-size: 42px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .rate-readout .change { font-size: 14px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; transition: color .3s ease; }
+    .change.up { color: var(--up); }
+    .change.down { color: var(--down); }
+
+    #chart-currency { width: auto; min-width: 200px; max-width: 100%; }
+
+    .ranges {
+      position: relative; display: inline-flex; gap: 2px; margin-top: 18px; padding: 4px;
+      background: var(--field); border-radius: 12px; max-width: 100%; overflow-x: auto;
+    }
+    .range-btn {
+      position: relative; z-index: 1; width: auto; margin: 0;
+      padding: 8px 14px; font-size: 13px; border: none; border-radius: 9px;
+      background: transparent; color: var(--muted);
+    }
+    .range-btn:hover { color: var(--text); }
+    .range-btn.active { color: var(--text); }
+    .range-pill {
+      position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: 0;
+      background: var(--card); border-radius: 9px; box-shadow: 0 2px 8px rgba(20,33,61,.12);
+      transition: transform .35s cubic-bezier(.3,.9,.3,1), width .35s cubic-bezier(.3,.9,.3,1);
+    }
+
+    #chart-container { position: relative; width: 100%; height: 330px; margin-top: 18px; }
+    #currency-chart { width: 100%; height: 100%; }
+    #chart-container.loading #currency-chart { opacity: .25; }
+    #currency-chart { transition: opacity .3s ease; }
+    .chart-message { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: var(--muted); font-size: 14px; pointer-events: none; }
+
+    .live-status { margin-top: 12px; font-size: 12px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--up); position: relative; }
+    .live-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--up); animation: ping 1.8s ease-out infinite; }
+    .live-status.error .live-dot, .live-status.error .live-dot::after { background: var(--down); }
+    @keyframes ping { from { transform: scale(1); opacity: .6; } to { transform: scale(3); opacity: 0; } }
+
+    .news-card { grid-column: 1 / -1; padding: 18px 26px; display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+    .news-card h3 { margin: 0; font-size: 14px; font-weight: 800; }
+    .news-card ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; flex-wrap: wrap; }
+    .news-card a {
+      display: inline-block; padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      color: var(--text); text-decoration: none; background: var(--field); border: 1px solid var(--line);
+      transition: transform .2s ease, border-color .2s ease, color .2s ease;
+    }
+    .news-card a:hover, .news-card a:focus-visible { transform: translateY(-2px); border-color: var(--accent); color: var(--accent); outline: none; }
+
+    .site-footer {
+      text-align: center; padding: 22px 15px; font-size: 13px; color: var(--muted);
+      border-top: 1px solid var(--line); user-select: none; margin-top: 8px;
+    }
+    .site-footer p { margin: 0; }
+
+    @media (max-width: 880px) {
+      .main-container { grid-template-columns: 1fr; padding: 16px; }
+      header.top { padding: 20px 16px 0; }
+      .rate-readout .big { font-size: 34px; }
+      #chart-currency { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="top">
+    <div>
+      <h1>CConverter</h1>
+      <p>Convert instantly, then see where the rate has been.</p>
+    </div>
+    <button id="mode-toggle" aria-label="Toggle dark or light mode" title="Toggle dark/light"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v9"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg></button>
+  </header>
+
+  <div class="main-container">
+
+    <section class="card converter">
+      <h2>Convert</h2>
+
+      <label class="field" for="amount">Amount</label>
+      <input type="number" id="amount" placeholder="0.00" />
+
+      <label class="field" for="from">From</label>
+      <select id="from"></select>
+
+      <div class="swap-row">
+        <button id="reverse-btn" type="button"><span class="arrows">⇄</span> Swap</button>
+      </div>
+
+      <label class="field" for="to">To</label>
+      <select id="to"></select>
+
+      <button id="convert-btn" class="primary">Convert</button>
+
+      <div class="result-box">
+        <h3 id="result"></h3>
+        <span class="hint" id="result-hint">Enter an amount to get started</span>
+      </div>
+
+      <div class="copy-row">
+        <button id="copy-btn">Copy Result</button>
+        <label class="raw-toggle">
+          <input type="checkbox" id="raw-toggle" /> Copy raw number
+        </label>
+      </div>
+
+      <div id="last-updated" class="last-updated"></div>
+    </section>
+
+    <section class="card chart-card">
+      <div class="chart-head">
+        <div class="rate-readout">
+          <div class="pair" id="pair-label">1 USD in EUR</div>
+          <div class="big" id="big-rate">–</div>
+          <div class="change" id="rate-change">&nbsp;</div>
+        </div>
+        <select id="chart-currency" aria-label="Currency to chart against USD"></select>
+      </div>
+
+      <div class="ranges" id="ranges" role="tablist" aria-label="Chart time range">
+        <span class="range-pill" id="range-pill"></span>
+        <button class="range-btn" data-range="24H">24H</button>
+        <button class="range-btn" data-range="1D">1D</button>
+        <button class="range-btn" data-range="5D">5D</button>
+        <button class="range-btn" data-range="1M">1M</button>
+        <button class="range-btn" data-range="1Y">1Y</button>
+        <button class="range-btn" data-range="5Y">5Y</button>
+        <button class="range-btn" data-range="MAX">Max</button>
+      </div>
+
+      <div id="chart-container" class="loading">
+        <canvas id="currency-chart"></canvas>
+        <div id="chart-message" class="chart-message">Loading exchange rate...</div>
+      </div>
+
+      <div id="live-status" class="live-status">
+        <span class="live-dot"></span><span id="live-text">Live</span>
+      </div>
+    </section>
+
+    <section class="card news-card">
+      <h3>Currency news</h3>
+      <ul>
+        <li><a href="https://www.reuters.com/finance" target="_blank" rel="noopener noreferrer">Reuters</a></li>
+        <li><a href="https://www.bloomberg.com/markets" target="_blank" rel="noopener noreferrer">Bloomberg</a></li>
+        <li><a href="https://www.cnbc.com/" target="_blank" rel="noopener noreferrer">CNBC</a></li>
+        <li><a href="https://www.fxstreet.com/news" target="_blank" rel="noopener noreferrer">FXStreet</a></li>
+        <li><a href="https://www.investing.com/news" target="_blank" rel="noopener noreferrer">Investing.com</a></li>
+      </ul>
+    </section>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>© 2025 Christian Pothier. All rights reserved.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const currencies = {
+      "USD": "United States Dollar", "EUR": "Euro", "JPY": "Japanese Yen",
+      "GBP": "British Pound Sterling", "AUD": "Australian Dollar", "CAD": "Canadian Dollar",
+      "CHF": "Swiss Franc", "CNY": "Chinese Yuan", "SEK": "Swedish Krona",
+      "NZD": "New Zealand Dollar", "MXN": "Mexican Peso", "SGD": "Singapore Dollar",
+      "HKD": "Hong Kong Dollar", "NOK": "Norwegian Krone", "KRW": "South Korean Won",
+      "TRY": "Turkish Lira", "INR": "Indian Rupee", "RUB": "Russian Ruble",
+      "BRL": "Brazilian Real", "ZAR": "South African Rand", "DKK": "Danish Krone",
+      "PLN": "Polish Zloty", "TWD": "New Taiwan Dollar", "THB": "Thai Baht",
+      "MYR": "Malaysian Ringgit", "IDR": "Indonesian Rupiah", "CZK": "Czech Koruna",
+      "HUF": "Hungarian Forint", "ILS": "Israeli New Shekel", "CLP": "Chilean Peso",
+      "PHP": "Philippine Peso", "AED": "United Arab Emirates Dirham", "COP": "Colombian Peso",
+      "SAR": "Saudi Riyal", "RON": "Romanian Leu"
+    };
+
+    const currencySymbols = {
+      USD: "$", EUR: "€", GBP: "£", JPY: "¥", CNY: "¥", KRW: "₩", INR: "₹", RUB: "₽",
+      TRY: "₺", BRL: "R$", CAD: "C$", AUD: "A$", CHF: "CHF ", SEK: "kr ", NOK: "kr ",
+      DKK: "kr ", PLN: "zł ", CZK: "Kč ", HUF: "Ft ", NZD: "NZ$", SGD: "S$", HKD: "HK$",
+      MXN: "MX$", ZAR: "R", THB: "฿", MYR: "RM", IDR: "Rp", PHP: "₱", TWD: "NT$",
+      ILS: "₪", CLP: "CLP$", COP: "COL$", AED: "د.إ ", SAR: "﷼", RON: "lei "
+    };
+
+    const $ = id => document.getElementById(id);
+    const fromSelect = $("from"), toSelect = $("to"), amountInput = $("amount");
+    const resultEl = $("result"), hintEl = $("result-hint"), lastUpdatedEl = $("last-updated");
+    const rawToggle = $("raw-toggle"), copyBtn = $("copy-btn");
+    const chartCurrency = $("chart-currency"), chartMessage = $("chart-message");
+    const chartContainer = $("chart-container");
+    const liveStatus = $("live-status"), liveText = $("live-text");
+    const rangesEl = $("ranges"), pill = $("range-pill");
+
+    let latestConvertedValue = null, latestCurrency = null;
+    let currencyChart = null, liveTimer = null;
+    let selectedRange = "1M";
+    let requestId = 0;
+    const historyCache = new Map();
+
+    /* ---------- selects ---------- */
+    function populateSelects() {
+      for (const [code, name] of Object.entries(currencies)) {
+        for (const sel of [fromSelect, toSelect, chartCurrency]) {
+          const o = document.createElement("option");
+          o.value = code;
+          o.textContent = `${code} - ${name}`;
+          sel.appendChild(o);
+        }
+      }
+      fromSelect.value = "USD";
+      toSelect.value = "EUR";
+      chartCurrency.value = "EUR";
+    }
+    populateSelects();
+
+    /* ---------- converter ---------- */
+    function countUp(el, from, to, render, duration = 600) {
+      const start = performance.now();
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) { el.textContent = render(to); return; }
+      function frame(now) {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = render(from + (to - from) * eased);
+        if (t < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    async function convert() {
+      const amount = parseFloat(amountInput.value);
+      const from = fromSelect.value;
+      const to = toSelect.value;
+
+      if (!amount || amount <= 0) {
+        alert("Enter a valid amount");
+        return;
+      }
+
+      const apiKey = "3062251a47c5135d5cc4b6ca";
+      const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/${from}`;
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.result === "success") {
+          const rate = data.conversion_rates[to];
+          const converted = amount * rate;
+          const fmt = v => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const inputFormatted = amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+          resultEl.classList.remove("pop");
+          void resultEl.offsetWidth;
+          resultEl.classList.add("pop");
+          countUp(resultEl, 0, converted, v => `${inputFormatted} ${from} = ${fmt(v)} ${to}`);
+
+          hintEl.textContent = `1 ${from} = ${rate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${to}`;
+          lastUpdatedEl.textContent = `Last updated: ${new Date().toLocaleString()}`;
+          showCopyButton(converted, to);
+        } else {
+          alert("Failed to get exchange rate");
+        }
+      } catch {
+        alert("Error fetching exchange rate");
+      }
+    }
+
+    $("convert-btn").addEventListener("click", convert);
+    amountInput.addEventListener("keydown", e => { if (e.key === "Enter") convert(); });
+
+    function showCopyButton(value, currency) {
+      latestConvertedValue = value;
+      latestCurrency = currency;
+      copyBtn.style.display = "inline-block";
+      copyBtn.textContent = "Copy Result";
+    }
+
+    copyBtn.addEventListener("click", async () => {
+      if (latestConvertedValue === null) return;
+      let text;
+      if (rawToggle.checked) {
+        text = latestConvertedValue.toFixed(2);
+      } else {
+        const symbol = currencySymbols[latestCurrency] || latestCurrency;
+        text = `${symbol}${latestConvertedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => { copyBtn.textContent = "Copy Result"; }, 1500);
+      } catch {
+        alert("Failed to copy");
+      }
+    });
+
+    $("reverse-btn").addEventListener("click", e => {
+      const t = fromSelect.value;
+      fromSelect.value = toSelect.value;
+      toSelect.value = t;
+      e.currentTarget.classList.toggle("spin");
+    });
+
+    /* ---------- dark mode ---------- */
+    function applyMode(dark) {
+      document.body.classList.toggle("dark", dark);
+      $("mode-toggle").classList.toggle("on", dark);
+      if (currencyChart) { styleChart(); currencyChart.update("none"); }
+    }
+    applyMode(localStorage.getItem("colorMode") === "dark");
+
+    $("mode-toggle").addEventListener("click", () => {
+      const dark = !document.body.classList.contains("dark");
+      localStorage.setItem("colorMode", dark ? "dark" : "light");
+      applyMode(dark);
+    });
+
+    /* ---------- chart ---------- */
+    const css = name => getComputedStyle(document.body).getPropertyValue(name).trim();
+
+    function setStatus(text, error = false) {
+      liveText.textContent = text;
+      liveStatus.classList.toggle("error", error);
+    }
+
+    function showMessage(text) {
+      chartMessage.textContent = text;
+      chartMessage.style.display = text ? "flex" : "none";
+    }
+
+    function styleChart() {
+      const c = currencyChart;
+      const muted = css("--muted"), grid = css("--line"), accent = css("--accent");
+      c.options.scales.x.ticks.color = muted;
+      c.options.scales.y.ticks.color = muted;
+      c.options.scales.y.grid.color = grid;
+      const ds = c.data.datasets[0];
+      ds.borderColor = accent;
+      ds.pointHoverBackgroundColor = accent;
+      ds.backgroundColor = ctx => {
+        const area = ctx.chart.chartArea;
+        if (!area) return "transparent";
+        const g = ctx.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+        g.addColorStop(0, accent + "40");
+        g.addColorStop(1, accent + "00");
+        return g;
+      };
+    }
+
+    function drawChart(labels, values, label, animate = true) {
+      const ctx = $("currency-chart").getContext("2d");
+      const cur = chartCurrency.value;
+      if (!currencyChart) {
+        currencyChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [{
+              label, data: values, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
+              tension: 0.25, fill: true
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 700, easing: "easeOutCubic" },
+            interaction: { intersect: false, mode: "index" },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                displayColors: false, padding: 10,
+                callbacks: { label: c => `1 USD = ${c.parsed.y.toFixed(4)} ${chartCurrency.value}` }
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { maxTicksLimit: 7, maxRotation: 0 } },
+              y: { grid: {}, ticks: { callback: v => `${Number(v).toFixed(3)} ${chartCurrency.value}` } }
+            }
+          }
+        });
+      } else {
+        currencyChart.data.labels = labels;
+        currencyChart.data.datasets[0].data = values;
+        currencyChart.data.datasets[0].label = label;
+      }
+      styleChart();
+      currencyChart.update(animate ? undefined : "none");
+    }
+
+    function updateReadout(values) {
+      const cur = chartCurrency.value;
+      $("pair-label").textContent = `1 USD in ${cur}`;
+      if (!values.length) { $("big-rate").textContent = "–"; $("rate-change").innerHTML = "&nbsp;"; return; }
+      const last = values[values.length - 1], first = values[0];
+      $("big-rate").textContent = last.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      const diff = last - first, pct = first ? (diff / first) * 100 : 0;
+      const el = $("rate-change");
+      if (values.length < 2) { el.className = "change"; el.innerHTML = "&nbsp;"; return; }
+      el.className = "change " + (diff >= 0 ? "up" : "down");
+      el.textContent = `${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(4)} (${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%) over ${selectedRange === "MAX" ? "all time" : selectedRange}`;
+    }
+
+    /* 24H view: ticks collected while the page is open, saved for up to 24 hours */
+    const tickKey = c => `ticks_${c}`;
+    function loadTicks(c) {
+      try {
+        const cutoff = Date.now() - 24 * 3600 * 1000;
+        return (JSON.parse(localStorage.getItem(tickKey(c))) || []).filter(t => t.t >= cutoff);
+      } catch { return []; }
+    }
+    function saveTick(c, v) {
+      const ticks = loadTicks(c);
+      ticks.push({ t: Date.now(), v });
+      try { localStorage.setItem(tickKey(c), JSON.stringify(ticks.slice(-600))); } catch {}
+      return ticks;
+    }
+
+    async function fetchLiveRate(c) {
+      if (c === "USD") return 1;
+      const r = await fetch(`https://api.frankfurter.dev/v2/rate/USD/${c}`, { cache: "no-store" });
+      if (!r.ok) throw new Error("rate");
+      const d = await r.json();
+      if (typeof d.rate !== "number") throw new Error("rate");
+      return d.rate;
+    }
+
+    function renderTicks(ticks) {
+      const labels = ticks.map(t => new Date(t.t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+      drawChart(labels, ticks.map(t => t.v), "Live rate", false);
+      updateReadout(ticks.map(t => t.v));
+    }
+
+    async function liveTick() {
+      const c = chartCurrency.value;
+      const id = requestId;
+      try {
+        const rate = await fetchLiveRate(c);
+        if (id !== requestId && selectedRange === "24H") return;
+        const ticks = saveTick(c, rate);
+        if (selectedRange === "24H") {
+          showMessage("");
+          chartContainer.classList.remove("loading");
+          renderTicks(ticks);
+        } else {
+          $("big-rate").textContent = rate.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+        }
+        setStatus(`Live · updated ${new Date().toLocaleTimeString()}`);
+      } catch {
+        setStatus("Connection error", true);
+        if (selectedRange === "24H") showMessage("Unable to load the live exchange rate right now.");
+      }
+    }
+
+    /* historical views */
+    const rangeDays = { "1D": 5, "5D": 8, "1M": 31, "1Y": 366, "5Y": 1827 };
+    const iso = d => d.toISOString().slice(0, 10);
+
+    async function fetchHistory(range, c) {
+      const key = `${range}_${c}`;
+      if (historyCache.has(key)) return historyCache.get(key);
+      const end = new Date();
+      const start = range === "MAX" ? new Date("1999-01-04") : new Date(Date.now() - rangeDays[range] * 864e5);
+      const url = `https://api.frankfurter.dev/v1/${iso(start)}..${iso(end)}?base=USD&symbols=${c}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error("history");
+      const d = await r.json();
+      let rows = Object.entries(d.rates || {}).map(([date, v]) => [date, v[c]]).filter(x => typeof x[1] === "number");
+      if (!rows.length) throw new Error("empty");
+      if (range === "1D") rows = rows.slice(-2);
+      if (range === "5D") rows = rows.slice(-5);
+      historyCache.set(key, rows);
+      return rows;
+    }
+
+    function labelFor(date, range) {
+      const d = new Date(date + "T00:00:00");
+      if (range === "1Y" || range === "5Y" || range === "MAX") {
+        return d.toLocaleDateString([], { month: "short", year: "numeric" });
+      }
+      return d.toLocaleDateString([], { month: "short", day: "numeric" });
+    }
+
+    async function loadRange() {
+      const id = ++requestId;
+      const c = chartCurrency.value;
+      chartContainer.classList.add("loading");
+      showMessage("Loading exchange rate...");
+
+      if (selectedRange === "24H") {
+        let ticks = loadTicks(c);
+        if (!ticks.length) { await liveTick(); return; }
+        showMessage("");
+        chartContainer.classList.remove("loading");
+        renderTicks(ticks);
+        setStatus(`Live · ${ticks.length} reading${ticks.length > 1 ? "s" : ""} in the last 24 hours`);
+        liveTick();
+        return;
+      }
+
+      if (c === "USD") {
+        showMessage("USD against itself is always 1. Pick another currency.");
+        updateReadout([1]);
+        return;
+      }
+
+      try {
+        const rows = await fetchHistory(selectedRange, c);
+        if (id !== requestId) return;
+        showMessage("");
+        chartContainer.classList.remove("loading");
+        drawChart(rows.map(r => labelFor(r[0], selectedRange)), rows.map(r => r[1]), `1 USD → ${c}`);
+        updateReadout(rows.map(r => r[1]));
+        setStatus(`Daily rates · latest ${rows[rows.length - 1][0]}`);
+      } catch {
+        if (id !== requestId) return;
+        updateReadout([]);
+        showMessage(`No history available for ${c}. Try a different currency or range.`);
+        setStatus("History unavailable", true);
+      }
+    }
+
+    /* range pill */
+    function movePill(btn) {
+      pill.style.width = btn.offsetWidth + "px";
+      pill.style.transform = `translateX(${btn.offsetLeft - 4}px)`;
+    }
+    function selectRange(range) {
+      selectedRange = range;
+      rangesEl.querySelectorAll(".range-btn").forEach(b => {
+        const on = b.dataset.range === range;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on);
+        if (on) movePill(b);
+      });
+      loadRange();
+    }
+
+    rangesEl.addEventListener("click", e => {
+      const b = e.target.closest(".range-btn");
+      if (b && b.dataset.range !== selectedRange) selectRange(b.dataset.range);
+    });
+    chartCurrency.addEventListener("change", () => { currencyChart && (currencyChart.data.datasets[0].data = []); loadRange(); });
+    window.addEventListener("resize", () => {
+      const a = rangesEl.querySelector(".range-btn.active");
+      if (a) movePill(a);
+    });
+
+    // keep collecting live ticks every 15 seconds
+    liveTimer = setInterval(liveTick, 15000);
+    (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => selectRange("1M"));
+  </script>
+</body>
+</html>
